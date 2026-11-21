@@ -527,8 +527,22 @@ class LiveTests(unittest.TestCase):
         # beyond the static core REFERENCES this file lists; robust whether or not one is installed.
         contrib_resolvable = {row[0] for _craft, row in refint.craft_references_contrib(dyadlib.PKG) if callable(row[5])}
         resolvable = RESOLVABLE | contrib_resolvable
-        skipped = [m for m in msgs if m.startswith("skip ")]   # an empty event store (before the first run) skips its kinds
-        self.assertGreaterEqual(n, 300); self.assertEqual(k, len(resolvable) - len(skipped))
+        # d-work #6: `check` counts a kind as resolving (`n_kinds += 1`) *before* its token loop, so only the
+        # store-level line — emitted by `store_empty(target)` ahead of that count — skips a whole kind. The other
+        # two shapes are token-level lines of a kind already counted: `… ; N token(s) unresolved here` (an absent
+        # craft, #167) and `… `crafts/…` tokens; no crafts/ tree is installed` (a core-only install). Counting
+        # every `skip ` line as a kind made this test pass only where no token-level line appears — the authoring
+        # system, which has `crafts/REGISTRY.md` — and fail on a checkout that has crafts and no registry
+        # (the reference distribution: 10 != 9).
+        whole_kind = [m for m in msgs if m.startswith("skip ") and m.endswith("store is empty or absent")]
+        self.assertGreaterEqual(n, 300); self.assertEqual(k, len(resolvable) - len(whole_kind))
+        # The fence against the same slip in the other direction: every `skip ` line not counted above names a
+        # kind the guard did count, so a new token-level shape cannot silently re-open the gap.
+        counted = {m[5:].split(":")[0].split(" (")[0] for m in whole_kind}
+        for m in (m for m in msgs if m.startswith("skip ") and m not in whole_kind):
+            kind = m[5:].split(":")[0].split(" (")[0]
+            self.assertIn(kind, resolvable, m)
+            self.assertNotIn(kind, counted, f"both counted and skipped whole: {m}")
     def test_main_prints_ok_line(self):
         r = subprocess.run([sys.executable, str(Path(refint.__file__))], capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr)
