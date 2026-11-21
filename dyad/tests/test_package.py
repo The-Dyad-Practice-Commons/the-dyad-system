@@ -1879,7 +1879,7 @@ class PrePushTests(unittest.TestCase):
         (self.d / "scratch.pyc").write_text("x\n")                     # ignored (.gitignore `*.pyc`): not a change
         r = self.push("dirty")
         self.assertNotIn("FAIL [pre-push]", r.stdout + r.stderr)      # judged now: the guards run over the pushed commit,
-        self.assertIn("FAIL [guards] agent/prs", r.stdout + r.stderr)  # whose uncited message the plan gate refuses
+        self.assertIn("ok   [guards] agent/prs transaction", r.stdout + r.stderr)   # which the plan gate judges — nothing
         (self.d / "scratch.pyc").unlink()
     def test_d_a_deletion_passes(self):
         self.ensure_main_pushed()

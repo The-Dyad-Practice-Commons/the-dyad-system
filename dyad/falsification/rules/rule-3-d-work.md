@@ -2180,3 +2180,41 @@ No term is added or changed (Rule-6): `incident`, `intake` and the craft registr
 the craft's name.
 
 Disposition: see ledger #747.
+
+## Amendment — d-work #5 (2026-11-21: the plan gate on a checkout that holds no ledger)
+**Claim (the operator's prompt, the-dyad-system-steward #5):** the plan gate must not refuse a branch on a checkout
+whose base holds no d-work store at all. The reference distribution ships the crafts and no instance, so no row exists
+to cite and no citation can resolve; the gate therefore failed every contributor's push, and the frame guard failed with
+it on `@../preferences-corpus/PREFERENCES.md`, which that distribution deliberately omits. Where the base holds no row
+store the gate returns one `warning:` line and judges nothing (Rule-20 property 2, the absent store; the runner prints a
+warning and never fails on it, #519); where it holds one row, every judgement the gate makes today is still made.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| A1 | The skip hides a real citation fault. | **Refuted** | It fires only when the base holds no row store at all. A dyad system's `main` holds rows from its first d-work on, and the row guard's append-only fence refuses any commit deleting one, so the store cannot be emptied to buy the skip. The test asserts that boundary: one real row at the base and a citing branch passes while an uncited one is still refused with `cites no`. |
+| A2 | A fresh dyad system loses the gate on its first branch. | **Survives, scoped** | Before its first row no citation could resolve in any case, so the gate protected nothing; and the commit writing that first row is ledger-only, which the gate already skips (#191). From that row on the gate is armed. |
+| A3 | The reference should carry a ledger instead. | **Confirmed as an alternative, rejected** | A seeded row would work mechanically. It is refused: the reference ships no instance by its own design (Rule-11 property 1), and contributors cannot cite rows of a ledger they cannot write — a row of the authoring system's ledger is not theirs to claim. |
+| A4 | This reverses d-work #715 rather than restoring it. | **Confirmed and stated** | #715 asked only that a store-less base not crash, and left the gate judging against an empty ledger. Whether a repository that will never hold a ledger should be gated at all is a new question, which is why the Rule text is amended rather than the code quietly changed, and why the test's docstring names both. |
+
+**Verdict:** the claim survives.
+- **Rules:** Mechanisms' plan gate paragraph gains the third skip; Provenance gains its line.
+- **Guards:** `agent/prs` `check_transaction` warns and judges nothing on a store-less base; `agent/frame` warns, rather
+  than fails, on an absent `@` import that resolves outside the craft root, and still fails one inside it (the #137 gap).
+
+**Rule-5 pairwise (the pairs the change bears on):**
+- **20 (property 2):** coherent. An absent target store skips with a printed line, never a failure. Rule-20 owns the
+  severity of a reference held in a store; the gate is a transaction check Rule-20's Boundaries already hand to Rule-3,
+  and this skip reads the same severity rather than redefining it. Orthogonal.
+- **2 (Binding):** coherent. The gate authorizes nothing and ratifies nothing; a merge still needs its done-`Y`, and a
+  warning is not a disposition. Orthogonal.
+- **11 (properties 1 and 2):** coherent. The distribution's craft/instance split is what makes the store absent; the
+  guards now read that absence instead of failing on it. Orthogonal: Rule-11 owns what a craft ships.
+- **15:** coherent. The plan file and the two phases are untouched; a row with a plan still carries its `Y plan` to the
+  gate.
+
+No term is added or changed (Rule-6): `plan gate` is already defined and its definition still reads correctly — the
+check that a PR's cited d-work carries a `Y plan` disposition — since the skip concerns a base with no d-work to cite.
+No public-surface row changes (`dyad/surface.md`): no `dyadlib.CLI` form, no new verb, no new flag; `frame.inside` is an
+internal helper of a guard module.
+
+Disposition: see ledger #5.

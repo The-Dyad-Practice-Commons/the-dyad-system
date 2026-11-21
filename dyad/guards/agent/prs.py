@@ -12,6 +12,12 @@ the range. It skips, for the same reason, a range that touches only `<host>/runb
 (`events_only`, d-work #438): monitoring's record is an observation, never a decision, and claims no
 d-work either. Each class is judged whole: a range mixing ledger-only and events-only commits is
 neither, and goes through the gate. The events guard (`sysadmin/events`) keeps the store append-only.
+It skips, third, a range whose base holds no d-work store at all (`dyadlib.read_rows` yields none,
+d-work #715): no citation can resolve against a ledger that is not there, so the gate would refuse
+every branch — the reference distribution, which ships no instance by design, and a fresh install
+before its first row. There it returns one `warning:` line and judges nothing (Rule-20 property 2,
+the absent store; the runner prints a warning and never fails on it, #519). One row at the base arms
+the gate in full again.
   PR_BODY="..." BASE_SHA=<sha> prs.py
 """
 import sys
@@ -75,15 +81,20 @@ def events_only(root: Path, base: str, head: str) -> bool:
 def check_transaction(root: Path, base: str, head: str) -> list[str]:
     """On a branch: the commit messages of base..head are the body; rows read at the base. A
     ledger-only range (`ledger_only`, #191) or an events-only one (`events_only`, #438) is clerical and
-    cites nothing; a range mixing the two is neither."""
+    cites nothing; a range mixing the two is neither. A base holding no row store at all is a repository
+    with no ledger to cite — the reference distribution, a fresh install before its first row — where
+    the gate warns and judges nothing (Rule-20 property 2, absent store; d-work #5)."""
     if subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=root, text=True).strip() == "main":
         return []
     if ledger_only(root, base, head) or events_only(root, base, head):
         return []
     if not subprocess.check_output(["git", "rev-list", f"{base}..{head}"], cwd=root, text=True).strip():
         return []   # an empty range claims nothing: a detached HEAD at the base, as `automaton sweep --stores` runs (#617)
+    rows = dyadlib.read_rows(root, at=base)
+    if not rows:
+        return [f"warning: no d-work store at {base}: the plan gate judges nothing here (Rule-20 p2, absent store)"]
     body = subprocess.check_output(["git", "log", "--format=%B", f"{base}..{head}"], cwd=root, text=True)
-    return check(body, rows=dyadlib.read_rows(root, at=base))
+    return check(body, rows=rows)
 
 def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
     return {"store": "The World (hosting): a PR against `main`", "parser": "`prs.cited` over the PR body (or a branch's commit messages)",
