@@ -47,8 +47,12 @@ class DworkLinkTests(unittest.TestCase):
     def test_contract(self):
         self.assertEqual((d.ENTITY, d.CORPUS, d.TRANSACTION, d.FIELDS), ("pr", "agent", True, ("body",)))
     def test_a_base_with_no_store_reads_as_an_empty_ledger(self):
-        """#715: a fresh system's `main` holds no d-work store; the gate judges the range against an empty ledger, a cited
-        row refused as unknown with its message and a range citing none refused as uncited, never a traceback."""
+        """A base holding no d-work store at all: the gate warns and judges nothing (d-work #5). #715 asked only that
+        such a base not crash, and the gate then judged the range against an empty ledger — so on a repository that
+        will never hold a ledger (the reference distribution, which ships no instance) and on a fresh install before
+        its first row, every citation was unknown and every uncited branch uncited, and no contributor could push at
+        all. #715 never asked whether such a repository should be gated; this test asserts the new answer and its
+        boundary: one row at the base arms the gate in full again, so the skip cannot widen."""
         import os, subprocess, tempfile
         root = Path(tempfile.mkdtemp()); sh = lambda *a: subprocess.run(a, cwd=root, check=True, capture_output=True, text=True)
         sh("git", "init", "-q", "-b", "main"); sh("git", "config", "user.email", "t@t"); sh("git", "config", "user.name", "t")
@@ -57,10 +61,29 @@ class DworkLinkTests(unittest.TestCase):
         sh("git", "checkout", "-q", "-b", "agent/1-x"); (root / "f").write_text("f"); sh("git", "add", "-A")
         sh("git", "commit", "-qm", "work (d-work #1)")
         got = d.check_transaction(root, base, sh("git", "rev-parse", "HEAD").stdout.strip())
-        self.assertEqual(len(got), 1); self.assertIn("#1 not in ledger", got[0])
+        self.assertEqual(len(got), 1, got)                               # one line, judging nothing
+        self.assertTrue(got[0].startswith("warning: no d-work store at"), got[0])
+        self.assertNotIn("not in ledger", got[0])
         (root / "g").write_text("g"); sh("git", "add", "-A"); sh("git", "commit", "-qm", "no citation")
         sh("git", "checkout", "-q", "-b", "agent/none", base); (root / "h").write_text("h"); sh("git", "add", "-A")
-        sh("git", "commit", "-qm", "uncited"); self.assertIn("cites no", d.check_transaction(root, base, "HEAD")[0])
+        sh("git", "commit", "-qm", "uncited")
+        got = d.check_transaction(root, base, "HEAD")                    # an uncited branch is warned, not refused
+        self.assertEqual(len(got), 1, got)
+        self.assertTrue(got[0].startswith("warning: no d-work store at"), got[0])
+        self.assertNotIn("cites no", got[0])
+        # The boundary: one real row at the base and the gate judges in full again.
+        sh("git", "checkout", "-q", "main")
+        rows = root / "agent-corpus" / "d-work" / "rows"; rows.mkdir(parents=True)
+        (rows / "1.md").write_text("id: 1\ntitle: one\nopened: 2026-11-21\nstate: open\ndisposed: 2026-11-21 Y plan\nrefs: \n")
+        sh("git", "add", "-A"); sh("git", "commit", "-qm", "ledger: open #1")
+        base = sh("git", "rev-parse", "HEAD").stdout.strip()
+        sh("git", "checkout", "-q", "-b", "agent/1-y"); (root / "i").write_text("i"); sh("git", "add", "-A")
+        sh("git", "commit", "-qm", "work (d-work #1)")
+        self.assertEqual(d.check_transaction(root, base, sh("git", "rev-parse", "HEAD").stdout.strip()), [])
+        sh("git", "checkout", "-q", "-b", "agent/none-2", base); (root / "j").write_text("j"); sh("git", "add", "-A")
+        sh("git", "commit", "-qm", "uncited")
+        got = d.check_transaction(root, base, sh("git", "rev-parse", "HEAD").stdout.strip())
+        self.assertEqual(len(got), 1, got); self.assertIn("cites no", got[0])
 
     def test_transaction_check_reads_branch_messages(self):
         import os, subprocess, tempfile
